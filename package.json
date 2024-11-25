@@ -1,0 +1,59 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000p\u0000i\u0000l\u0000o\u0000t\u0000-\u0000h\u0000u\u0000n\u0000t\u0000\r\u0000 \u0000",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/storage": "^6.7.0",
+    "@maphubs/tokml": "^0.6.1",
+    "archiver": "^5.3.1",
+    "aws-sdk": "^2.1246.0",
+    "axios": "^1.7.2",
+    "bcrypt": "^5.0.1",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "currency-converter-lt": "^2.0.0-beta.0",
+    "dotenv": "^16.0.2",
+    "express": "^4.19.2",
+    "facebook-nodejs-business-sdk": "^14.0.0",
+    "firebase-admin": "^11.5.0",
+    "fresh": "^0.5.2",
+    "geojson": "^0.5.0",
+    "google-auth-library": "^8.5.1",
+    "handlebars": "^4.7.7",
+    "haversine-distance": "^1.2.1",
+    "jsdom": "^21.1.1",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^6.5.4",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "multer-s3": "^2.10.0",
+    "mysql": "^2.18.1",
+    "mysql2": "^2.3.3",
+    "node-mailer": "^0.1.1",
+    "nodemailer": "^6.7.8",
+    "paypal-rest-sdk": "^1.8.1",
+    "sequelize": "^6.21.6",
+    "stripe": "^10.16.0",
+    "xmlbuilder": "^15.1.1",
+    "xmlserializer": "^0.6.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.19"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Muneeb-Ahmad45/ServiceMarketBackend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Muneeb-Ahmad45/ServiceMarketBackend/issues"
+  },
+  "homepage": "https://github.com/Muneeb-Ahmad45/ServiceMarketBackend#readme"
+}
