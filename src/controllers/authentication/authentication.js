@@ -23,7 +23,8 @@ exports.registerUser = async (req, res, next) => {
       user_name,
       email,
       password,
-      is_dermatologist
+      is_dermatologist,
+      is_vendor
     } = req.body;
     console.log(req.body,"..................")
     let emailCheck = await emailAvailabilityCheck(email);
@@ -40,8 +41,10 @@ exports.registerUser = async (req, res, next) => {
             document = req.file.path
           }
           let user_role = "user"
+          let status = "0"
           if(JSON.parse(is_dermatologist)){
             user_role = "dermatologist"
+            status = "1"
           }
           
             let hashedPass = await bcrypt.hash(password, 10);
@@ -52,7 +55,9 @@ exports.registerUser = async (req, res, next) => {
               password: password,
               role: user_role,
               is_dermatologist:JSON.parse(is_dermatologist),
-              document:document
+              is_vendor:JSON.parse(is_vendor),
+              document:document,
+              status: status,
             });
             if (new_user) {
               let token = await accessToken(new_user);
@@ -94,13 +99,31 @@ exports.loginUser = async (req, res, next) => {
   try {
     let { user_name, password } = req.body;
     console.log(req.body);
+
+    // Find user by username
     let user = await findUserByUserName(user_name);
     console.log(user);
-    if (user == false || user == 2) {
+
+    if (!user || user == false || user == 2) {
+      // User not found or invalid credentials
       await sendResponse(res, 200, false, null, "Invalid credentials", {});
     } else {
+      // Check if user status is '1' (approval pending)
+      if (user.status === "1") {
+        await sendResponse(
+          res,
+          200, // Forbidden
+          false,
+          null,
+          "Your approval is pending. Please wait for admin approval.",
+          {}
+        );
+        return; // Stop further execution
+      }
+
+      // Check if password matches
       if (await bcrypt.compare(password, user.password)) {
-        await user.save();
+        // Generate token and return user details
         let token = await accessToken(user);
         user.password = null;
 
@@ -109,21 +132,24 @@ exports.loginUser = async (req, res, next) => {
           token,
         });
       } else {
+        // Invalid password
         await sendResponse(res, 200, false, null, "Invalid credentials", {});
       }
     }
   } catch (err) {
+    // Handle errors
     console.log(err.message);
     await sendResponse(
       res,
       500,
       false,
       err.message,
-      "Something went wrong please try again later",
+      "Something went wrong, please try again later.",
       {}
     );
   }
 };
+
 exports.updatePassword = async (req, res, next) => {
   try {
     let user_id = req.user_id;
@@ -362,7 +388,7 @@ exports.getAllPendingDermatologist = async (req, res, next) => {
           200,
           true,
           null,
-          "User Deleted Successfully..!",
+          "Users Fetched Successfully..!",
           users
         );
       
@@ -383,34 +409,83 @@ exports.getAllPendingDermatologist = async (req, res, next) => {
 };
 exports.approvedOrDisapprovedPendingDermatologist = async (req, res, next) => {
   try {
-    let {
-      status,
-      user_id
-    } = req.body
-    let users = await User.findById(user_id);
-    if (users) {
-      users.status = status
-        await sendResponse(
-          res,
-          200,
-          true,
-          null,
-          "Action Taken Successfully..!",
-          users
-        );
-      
-    } else {
-      await sendResponse(res, 400, false, null, "Users Does not Exist..", {});
+    const { status, user_id } = req.body;
+
+    // Validate request
+    if (!user_id || !status) {
+      return await sendResponse(
+        res,
+        400,
+        false,
+        null,
+        "User ID and status are required.",
+        {}
+      );
     }
+
+    // Find the user by ID
+    const user = await User.findById(user_id);
+
+    if (!user) {
+      return await sendResponse(
+        res,
+        404,
+        false,
+        null,
+        "User does not exist.",
+        {}
+      );
+    }
+
+    // Handle approved status
+    if (status === "approved") {
+      user.status = "0"; // Set status to "0" for successful approval
+      user.is_dermatologist = true; // Mark as dermatologist if applicable
+      await user.save(); // Save the changes
+      return await sendResponse(
+        res,
+        200,
+        true,
+        null,
+        "Signup successful and user approved!",
+        user
+      );
+    }
+
+    // Handle rejected status
+    if (status === "rejected") {
+      user.status = "2"; // Optional: Set a separate status for rejection if needed
+      await user.save(); // Save the changes
+      return await sendResponse(
+        res,
+        200,
+        true,
+        null,
+        "Signup rejected.",
+        user
+      );
+    }
+
+    // Handle invalid status values
+    return await sendResponse(
+      res,
+      400,
+      false,
+      null,
+      "Invalid status value. Allowed values are 'approved' or 'rejected'.",
+      {}
+    );
   } catch (err) {
-    console.log(err);
-    await sendResponse(
+    console.error("Error in approvedOrDisapprovedPendingDermatologist:", err);
+
+    return await sendResponse(
       res,
       500,
       false,
       err.message,
-      "Something went wrong please try again later",
+      "Something went wrong. Please try again later.",
       {}
     );
   }
 };
+

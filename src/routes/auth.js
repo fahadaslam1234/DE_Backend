@@ -27,5 +27,6 @@ router.post("/reset-password", userAuth, AuthController.resetPassword);
 router.get("/getAllUsers",  AuthController.getAllUsers);
 router.post("/delete",  AuthController.deleteUserByID);
 router.get("/getAllPendingUsers",  AuthController.getAllPendingDermatologist);
+router.post("/approveReject",  AuthController.approvedOrDisapprovedPendingDermatologist);
 
 module.exports = router;

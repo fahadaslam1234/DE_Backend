@@ -11,6 +11,10 @@ const usersSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    is_vendor: {
+      type: Boolean,
+      default: false,
+    },
     role: {
       type: String,
     },
