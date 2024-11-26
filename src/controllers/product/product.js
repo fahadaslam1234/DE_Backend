@@ -1,23 +1,38 @@
 let Product = require("../../models/products/Products");
 const { sendResponse } = require("../../helpers/response");
 
+const path = require("path");
 exports.createProduct = async (req, res, next) => {
   try {
-    let {
-      product_name,
-      product_description,
-      price
-    } = req.body;
-    if(!req.file || req.file == undefined || req.file== null){
-      return await sendResponse(res,200,false,null,"Product Image is required!",{})
+    let { product_name, product_description, price } = req.body;
+
+    // Check if the file is uploaded
+    if (!req.file || req.file === undefined || req.file === null) {
+      return await sendResponse(res, 200, false, null, "Product Image is required!", {});
     }
-   let product_image =req.file.path
+
+    // Get the uploaded file path
+    let originalPath = req.file.path;
+
+    // Extract and sanitize the file name
+    let originalFileName = path.basename(originalPath);
+    let sanitizedFileName = originalFileName.replace(/^\d+-/, ""); // Remove numbers from the start
+
+    // Rebuild the path with the sanitized file name
+    let product_image = path.join(path.dirname(originalPath), sanitizedFileName);
+
+    // Optional: Rename the file in the file system
+    const fs = require("fs");
+    fs.renameSync(originalPath, product_image);
+
+    // Save product details to the database
     let createProduct = await Product.create({
       product_name: product_name,
       product_description: product_description,
       product_image: product_image,
-      price:price
+      price: price
     });
+
     if (createProduct) {
       await sendResponse(
         res,
@@ -33,11 +48,10 @@ exports.createProduct = async (req, res, next) => {
         400,
         false,
         null,
-        "Something went wrong while creating project",
+        "Something went wrong while creating the product",
         {}
       );
     }
-
   } catch (err) {
     console.log(err.message);
     await sendResponse(
@@ -45,11 +59,12 @@ exports.createProduct = async (req, res, next) => {
       500,
       false,
       err.message,
-      "something went wrong please try again later",
+      "Something went wrong, please try again later",
       {}
     );
   }
 };
+
 exports.getAllProducts = async (req, res, next) => {
   try {
     let findProducts = await Product.find({is_deleted:false});
