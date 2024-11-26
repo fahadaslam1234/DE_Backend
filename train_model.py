@@ -5,7 +5,7 @@ from sklearn.preprocessing import LabelEncoder
 import joblib
 
 # Load the dataset from Excel
-df = pd.read_excel('data/testingDataForSolutionFinder.xlsx', sheet_name=0)  # Adjust the path and sheet_name if necessary
+df = pd.read_excel('data/wrinklesandfinelines.xlsx', sheet_name=0)  # Adjust the path and sheet_name if necessary
 
 # Check the dataset structure
 print(df.head())  # Optional: Remove this line after verifying the dataset's structure
@@ -68,4 +68,4 @@ def recommend_product(skin_condition, skin_feel, ingredient_preference):
     return recommended_product
 
 # Example usage
-print(recommend_product('Skin Texture/Dullness', 'Dry', 'Vegan'))
+#print(recommend_product('Skin Texture/Dullness', 'Dry', 'Vegan'))
