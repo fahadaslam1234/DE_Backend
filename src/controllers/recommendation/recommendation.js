@@ -1,5 +1,4 @@
 const axios = require("axios");
-const response = require("../../helpers/response");
 
 exports.getRecommendation = async (req, res) => {
     const userInput = req.body;
@@ -14,16 +13,23 @@ exports.getRecommendation = async (req, res) => {
 
         // Prepare the response object
         const resultData = {
-            recommendedProduct
+            recommendedProduct,
         };
 
         console.log("Recommendation Result:", resultData);
 
         // Send the success response
-        return response.success(res, resultData);
+        return res.status(200).json({
+            success: true,
+            data: resultData,
+        });
     } catch (error) {
         console.error("Error getting recommendations:", error.message);
         // Send the error response
-        return response.error(res, "Failed to get product recommendation", 500, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to get product recommendation",
+            error: error.message,
+        });
     }
 };

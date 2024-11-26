@@ -14,7 +14,7 @@ le_ingredient = joblib.load('le_ingredient.pkl')
 le_product = joblib.load('le_product.pkl')
 
 # Load the dataset for direct lookup
-product_file_path = 'data/testingDataForSolutionFinder.xlsx'
+product_file_path = 'data/wrinklesandfinelines.xlsx'
 recommendation_df = pd.read_excel(product_file_path, engine='openpyxl')
 
 # Normalize the DataFrame columns
