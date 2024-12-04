@@ -30,11 +30,11 @@ exports.registerUser = async (req, res, next) => {
     let emailCheck = await emailAvailabilityCheck(email);
     console.log(emailCheck);
     if (emailCheck == false) {
-      await sendResponse(res, 403, false, null, "User Email is Already Exist!", {});
+      await sendResponse(res, 200, false, null, "User Email is Already Exist!", {});
     } else {
       let userNameCheck = await userNameAvailabilityCheck(user_name);
       if (userNameCheck == false || userNameCheck == 2) {
-        await sendResponse(res, 403, false, null, "User Name is Already Exist!", {});
+        await sendResponse(res, 200, false, null, "User Name is Already Exist!", {});
       } else {
           let document = null
           if(req.file != undefined && req.file !=null){
@@ -106,7 +106,7 @@ exports.loginUser = async (req, res, next) => {
 
     if (!user || user == false || user == 2) {
       // User not found or invalid credentials
-      await sendResponse(res, 403, false, null, "Invalid credentials", {});
+      await sendResponse(res, 200, false, null, "Invalid credentials", {});
     } else {
       // Check if user status is '1' (approval pending)
       if (user.status === "1") {
@@ -133,7 +133,7 @@ exports.loginUser = async (req, res, next) => {
         });
       } else {
         // Invalid password
-        await sendResponse(res, 403, false, null, "Invalid credentials", {});
+        await sendResponse(res, 200, false, null, "Invalid credentials", {});
       }
     }
   } catch (err) {
