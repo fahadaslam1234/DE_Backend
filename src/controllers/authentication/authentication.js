@@ -30,11 +30,11 @@ exports.registerUser = async (req, res, next) => {
     let emailCheck = await emailAvailabilityCheck(email);
     console.log(emailCheck);
     if (emailCheck == false) {
-      await sendResponse(res, 200, false, null, "User Already Exist!", {});
+      await sendResponse(res, 200, false, null, "User Email is Already Exist!", {});
     } else {
       let userNameCheck = await userNameAvailabilityCheck(user_name);
       if (userNameCheck == false || userNameCheck == 2) {
-        await sendResponse(res, 200, false, null, "User Already Exist!", {});
+        await sendResponse(res, 200, false, null, "User Name is Already Exist!", {});
       } else {
           let document = null
           if(req.file != undefined && req.file !=null){
