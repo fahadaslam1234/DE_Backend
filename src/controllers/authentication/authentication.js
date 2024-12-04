@@ -106,7 +106,7 @@ exports.loginUser = async (req, res, next) => {
 
     if (!user || user == false || user == 2) {
       // User not found or invalid credentials
-      await sendResponse(res, 200, false, null, "Invalid credentials", {});
+      await sendResponse(res, 403, false, null, "Invalid credentials", {});
     } else {
       // Check if user status is '1' (approval pending)
       if (user.status === "1") {
@@ -133,7 +133,7 @@ exports.loginUser = async (req, res, next) => {
         });
       } else {
         // Invalid password
-        await sendResponse(res, 200, false, null, "Invalid credentials", {});
+        await sendResponse(res, 403, false, null, "Invalid credentials", {});
       }
     }
   } catch (err) {
