@@ -11,33 +11,51 @@ exports.sendContactForm = async (req, res) => {
   try {
     // Configure Nodemailer transporter
     const transporter = nodemailer.createTransport({
-      service: 'gmail', // e.g., Gmail (use your email provider)
+      service: 'gmail',
       auth: {
-        user: 'dermease4@gmail.com', // Replace with your email
-        pass: 'kliu vadh jvti ynmx'  // Replace with your email password or app password
-      }
+        user: 'dermease4@gmail.com', // Replace with your Gmail address
+        pass: 'kliu vadh jvti ynmx', // Replace with your Gmail app password
+      },
+      secure: true, // Ensures a secure connection
     });
 
     // Mail options
     const mailOptions = {
-      from: email,
-      to: 'dermease4@gmail.com', // Replace with your email to receive messages
+      from: `Contact Form <${email}>`,
+      to: 'dermease4@gmail.com',
       subject: `New Contact Form Submission from ${name}`,
       text: `
         Name: ${name}
         Email: ${email}
-        Phone: ${phone}
+        Phone: ${phone || 'Not provided'}
         Message: ${message}
-      `
+      `,
     };
 
     // Send the email
     await transporter.sendMail(mailOptions);
 
-    // Send a success response
+    // Success response
     res.status(200).json({ success: true, message: 'Contact form submitted successfully.' });
   } catch (error) {
     console.error('Error sending email:', error);
-    res.status(500).json({ success: false, message: 'Failed to send the contact form.' });
+
+    // Specific error handling
+    if (error.code === 'EDNS' || error.code === 'ETIMEOUT') {
+      res.status(500).json({
+        success: false,
+        message: 'Network error: Unable to connect to the mail server.',
+      });
+    } else if (error.responseCode === 535 || error.responseCode === 454) {
+      res.status(500).json({
+        success: false,
+        message: 'Authentication error: Please check your email credentials.',
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send the contact form. Please try again later.',
+      });
+    }
   }
 };
