@@ -83,8 +83,8 @@ exports.sendEmail = async (user_email, link) => {
       secure: true,
       service: "Gmail",
       auth: {
-        user: "pilothuntapp@gmail.com",
-        pass: "xxyucvkuxxxswpkv",
+        user: "dermease4@gmail.com",
+        pass: "kliu vadh jvti ynmx",
       },
       debug: true,
       // alternatives: [

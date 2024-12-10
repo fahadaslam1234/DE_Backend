@@ -230,18 +230,26 @@ exports.updatePassword = async (req, res, next) => {
 exports.forgetPassword = async (req, res, next) => {
   try {
     const { user_email } = req.body;
-    if (user_email != undefined) {
+    console.log("User email provided:", user_email);
+
+    if (user_email) {
       const user = await User.findOne({ email: user_email });
+      console.log("User found:", user);
+
       if (user) {
         const token = jwt.sign(
           { id: user.id, role: user.role },
-          process.env.JWT_SECRET,
-          {
-            expiresIn: process.env.JWT_EXPIRE,
-          }
+          process.env.JWT_SECRET || 'default_secret_key',
+          { expiresIn: process.env.JWT_EXPIRE || '1h' }
         );
-        const link = `https://pilot.thecbt.cyou/api/v1/authentication/reset/${token}`;
+        console.log("Generated token:", token);
+
+        const link = `http://localhost:4200/reset-password?token=${token}`;
+        console.log("Reset link:", link);
+
         await sendEmail(user.email, link);
+        console.log("Email sent successfully");
+
         await sendResponse(
           res,
           200,
@@ -257,7 +265,7 @@ exports.forgetPassword = async (req, res, next) => {
       await sendResponse(res, 422, false, null, "Provide Valid Email....", {});
     }
   } catch (err) {
-    console.log(err.message);
+    console.error("Error in forgetPassword:", err.message);
     await sendResponse(
       res,
       500,
@@ -268,58 +276,36 @@ exports.forgetPassword = async (req, res, next) => {
     );
   }
 };
+
 exports.resetPassword = async (req, res, next) => {
   try {
     const { new_password } = req.body;
+    const token = req.headers.authorization
+      ? req.headers.authorization.split(' ')[1]
+      : req.query.token; // Support token in query parameters
 
-    const token = req.headers.authorization.split(" ")[1];
-
-    const decode_token = jwt.decode(token);
-
+    const decode_token = jwt.verify(token, process.env.JWT_SECRET || 'default_secret_key');
     const user_id = decode_token.id;
-    let user = await User.findById({ _id: user_id });
-    if (user) {
-      if (new_password.length >= 8) {
-        const encryptedPassword = await bcrypt.hash(new_password, 10);
-        const change_password = await User.updateOne(
-          { _id: user_id },
-          {
-            password: encryptedPassword,
-          }
-        );
-        await sendResponse(
-          res,
-          200,
-          true,
-          null,
-          "Password Changed Successfully..!",
-          {}
-        );
-      } else {
-        await sendResponse(
-          res,
-          422,
-          false,
-          null,
-          "Password Lenth is Too Short",
-          {}
-        );
-      }
-    } else {
-      await sendResponse(res, 400, false, null, "User Does not Exist..", {});
+
+    const user = await User.findById(user_id);
+    if (!user) {
+      return res.status(404).json({ message: "User does not exist" });
     }
+
+    if (new_password.length < 8) {
+      return res.status(400).json({ message: "Password length is too short" });
+    }
+
+    user.password = await bcrypt.hash(new_password, 10);
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully" });
   } catch (err) {
-    console.log(err);
-    await sendResponse(
-      res,
-      500,
-      false,
-      err.message,
-      "Something went wrong please try again later",
-      {}
-    );
+    console.error(err);
+    res.status(500).json({ message: "Something went wrong, please try again later" });
   }
 };
+
 exports.getAllUsers = async (req, res, next) => {
   try {
     let users = await User.find();
