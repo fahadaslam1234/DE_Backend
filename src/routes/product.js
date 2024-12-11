@@ -28,7 +28,7 @@ router.get(
   "/getAllProducts",
   product.getAllProducts
 );
-router.post(
+router.get(
   "/getSingleProduct",
   product.getProductByID
 );

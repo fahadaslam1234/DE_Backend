@@ -108,18 +108,25 @@ exports.getAllProducts = async (req, res, next) => {
 };
 exports.getProductByID = async (req, res, next) => {
   try {
-    let {
-      product_id
-    } = req.body
-    let findProduct = await Product.findById(product_id);
+    const { product_id } = req.query; // Use req.query for GET requests
+    const findProduct = await Product.findById(product_id);
+
     if (findProduct) {
+      const baseUrl = `${req.protocol}://${req.get("host")}/`; // Example: http://localhost:3000/
+      
+      // Modify the product object to include the full image URL
+      const productWithImage = {
+        ...findProduct.toObject(),
+        product_image: `${baseUrl}${findProduct.product_image}`
+      };
+
       await sendResponse(
         res,
         200,
         true,
         null,
         "Data Retrieved Successfully",
-        findProduct
+        productWithImage
       );
     } else {
       await sendResponse(
@@ -131,19 +138,20 @@ exports.getProductByID = async (req, res, next) => {
         {}
       );
     }
-
   } catch (err) {
-    console.log(err.message);
+    console.error(err.message);
     await sendResponse(
       res,
       500,
       false,
       err.message,
-      "something went wrong please try again later",
+      "Something went wrong. Please try again later.",
       {}
     );
   }
 };
+
+
 exports.deleteProductByID = async (req, res, next) => {
   try {
     let {

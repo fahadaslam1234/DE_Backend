@@ -45,6 +45,9 @@ exports.registerUser = async (req, res, next) => {
           if(JSON.parse(is_dermatologist)){
             user_role = "dermatologist"
             status = "1"
+          }else if(JSON.parse(is_vendor)){
+            user_role = "vendor"
+            status = "1"
           }
           
             let hashedPass = await bcrypt.hash(password, 10);
@@ -427,6 +430,7 @@ exports.approvedOrDisapprovedPendingDermatologist = async (req, res, next) => {
     if (status === "approved") {
       user.status = "0"; // Set status to "0" for successful approval
       user.is_dermatologist = true; // Mark as dermatologist if applicable
+      user.is_vendor = true; // Mark as dermatologist if applicable
       await user.save(); // Save the changes
       return await sendResponse(
         res,
