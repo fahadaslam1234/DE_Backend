@@ -10,6 +10,9 @@ const productSchema = mongoose.Schema(
       default: false,
     },
     price:String,
+    skin_conditions:String,
+    skin_feel:String,
+    ingredient_preferences:String
   },
   { timestamps: true }
 );

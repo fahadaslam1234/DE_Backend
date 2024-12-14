@@ -9,36 +9,43 @@ exports.getRecommendation = async (req, res) => {
         // Send user input to the Python Flask API
         const pythonResponse = await axios.post("http://127.0.0.1:5000/recommendation", userInput);
 
-        // Extract the product name from the Python API response
-        const recommendedProduct = pythonResponse.data?.product_name || "No product recommended";
+        // Extract the recommended products array from the Python API response
+        const recommendedProducts = pythonResponse.data?.recommended_products || [];
+        const source = pythonResponse.data?.source || "Unknown Source";
 
-        console.log("Recommended Product from Python API:", recommendedProduct);
+        console.log("Recommended Products from Python API:", recommendedProducts);
 
-        // Query the database for products containing the recommended product name
+        // Query the database for products matching any of the recommended product names
         const matchingProducts = await Product.find({
-            product_name: { $regex: recommendedProduct, $options: "i" }, // Case-insensitive search
+            product_name: { $in: recommendedProducts }, // Match any product name in the recommended array
         });
 
-        let message = "Matching products found.";
+        let message = "Matching products found in the store.";
         let externalLinks = [];
 
         // Check if no matching products were found
         if (matchingProducts.length === 0) {
-            message = `The product "${recommendedProduct}" is not available in our store. You can check external sources like Amazon or Cerave for availability.`;
-            externalLinks = [
-                { name: "Amazon", url: `https://www.amazon.com/s?k=${encodeURIComponent(recommendedProduct)}` },
-                { name: "Cerave", url: `https://www.cerave.com/search?q=${encodeURIComponent(recommendedProduct)}` },
-            ];
+            message = `None of the recommended products are available in our store. You can check external sources like Amazon or Cerave for availability.`;
+
+            // Generate external links for each recommended product
+            externalLinks = recommendedProducts.map((product) => ({
+                name: product,
+                links: [
+                    { name: "Amazon", url: `https://www.amazon.com/s?k=${encodeURIComponent(product)}` },
+                    { name: "Cerave", url: `https://www.cerave.com/search?q=${encodeURIComponent(product)}` },
+                ],
+            }));
         }
 
         console.log("Matching Products:", matchingProducts);
 
         // Prepare the response object
         const resultData = {
-            recommendedProduct,
+            recommendedProducts,
             matchingProducts,
             message,
-            externalLinks, // Include links to external sources if no product is found
+            externalLinks, // Include links to external sources if no matching product is found
+            source, // Indicate whether it's from "Exact Match" or "Model Prediction"
         };
 
         // Send the success response
@@ -48,10 +55,11 @@ exports.getRecommendation = async (req, res) => {
         });
     } catch (error) {
         console.error("Error getting recommendations or querying database:", error.message);
+
         // Send the error response
         return res.status(500).json({
             success: false,
-            message: "Failed to get product recommendation or query database",
+            message: "Failed to get product recommendations or query the database.",
             error: error.message,
         });
     }

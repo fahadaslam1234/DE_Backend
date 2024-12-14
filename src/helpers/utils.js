@@ -118,6 +118,62 @@ exports.sendEmail = async (user_email, link) => {
     console.log(error, "email not sent");
   }
 };
+
+exports.sendEmailApprovals = async (user_email, status) => {
+  try {
+    const smtpTransport = nodemailer.createTransport({
+      port: 465,
+      secure: true,
+      service: "Gmail",
+      auth: {
+        user: "dermease4@gmail.com",
+        pass: "kliu vadh jvti ynmx",
+      },
+    });
+
+    let subject = "";
+    let htmlContent = "";
+
+    if (status === "approved") {
+      subject = "Application Approved - Welcome to DermEase!";
+      htmlContent = `
+        <p>Dear User,</p>
+        <p>We are pleased to inform you that your application to join DermEase has been <strong>approved</strong>.</p>
+        <p>You can now log in and start offering your services on our platform.</p>
+        <p>Best regards,<br>DermEase Team</p>
+      `;
+    } else if (status === "rejected") {
+      subject = "Application Rejected - DermEase";
+      htmlContent = `
+        <p>Dear User,</p>
+        <p>We regret to inform you that your application to join DermEase has been <strong>rejected</strong>.</p>
+        <p>If you have any questions or would like more information, please feel free to contact our support team.</p>
+        <p>Best regards,<br>DermEase Team</p>
+      `;
+    } else {
+      throw new Error("Invalid status provided for email");
+    }
+
+    const mailOptions = {
+      to: user_email,
+      from: "dermease4@gmail.com",
+      subject: subject,
+      html: htmlContent,
+    };
+
+    smtpTransport.sendMail(mailOptions, function (error, info) {
+      if (error) {
+        console.error("Error sending email:", error);
+      } else {
+        console.log("Email sent successfully to:", user_email);
+      }
+    });
+  } catch (error) {
+    console.error("Error in sendEmailApprovals:", error.message);
+  }
+};
+
+
 exports.phoneNumberAvailabilityCheck = async (value) => {
   try {
     let user = await User.findOne({ phone_number: value });

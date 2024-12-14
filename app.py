@@ -3,6 +3,7 @@ from flask_cors import CORS
 import pandas as pd
 import joblib
 import logging
+from pymongo import MongoClient
 
 app = Flask(__name__)
 CORS(app)
@@ -10,8 +11,14 @@ CORS(app)
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
+# MongoDB setup
+MONGO_URI = "mongodb://127.0.0.1:27017/skin_care"
+client = MongoClient(MONGO_URI)
+db = client['skin_care']
+collection = db['products']
+
 # Load the pre-trained skincare recommendation model, encoders, and accuracy
-recommendation_model = joblib.load('xgb_skincare_model.pkl')  # Updated to load XGBoost model
+recommendation_model = joblib.load('xgb_skincare_model.pkl')
 le_conditions = joblib.load('le_conditions.pkl')
 le_feel = joblib.load('le_feel.pkl')
 le_ingredient = joblib.load('le_ingredient.pkl')
@@ -21,11 +28,6 @@ model_accuracy = joblib.load('model_accuracy.pkl')  # Load the accuracy value
 # Load the dataset for direct lookup
 product_file_path = 'data/solution_finder_dataset.xlsx'
 recommendation_df = pd.read_excel(product_file_path, engine='openpyxl')
-
-# Normalize the DataFrame columns
-recommendation_df['skin_conditions'] = recommendation_df['skin_conditions'].str.strip().str.lower()
-recommendation_df['skin_feel'] = recommendation_df['skin_feel'].str.strip().str.lower()
-recommendation_df['ingredient_preferences'] = recommendation_df['ingredient_preferences'].str.strip().str.lower()
 
 @app.before_request
 def log_request_info():
@@ -42,23 +44,39 @@ def recommend():
         return jsonify({'error': 'Missing required input fields: skin_conditions, skin_feel, ingredient_preferences'}), 400
 
     try:
-        # Extract and normalize input data
-        skin_condition = data.get('skin_conditions').strip().lower()
-        skin_feel = data.get('skin_feel').strip().lower()
-        ingredient_preference = data.get('ingredient_preferences').strip().lower()
+        # Extract input data
+        skin_condition = data.get('skin_conditions').strip()
+        skin_feel = data.get('skin_feel').strip()
+        ingredient_preference = data.get('ingredient_preferences').strip()
 
-        # Direct lookup in the DataFrame
-        match = recommendation_df[
+        # Step 1: Check for exact matches in the dataset
+        exact_match_df = recommendation_df[
             (recommendation_df['skin_conditions'] == skin_condition) &
             (recommendation_df['skin_feel'] == skin_feel) &
             (recommendation_df['ingredient_preferences'] == ingredient_preference)
         ]
+        exact_matches = exact_match_df['product_name'].tolist()
 
-        # If a match is found, return the product name directly
-        if not match.empty:
-            product_name = match.iloc[0]['product_name']
-            return jsonify({"product_name": product_name, "accuracy": model_accuracy})
+        # Step 2: Check for exact matches in the database
+        db_query = {
+            "skin_conditions": skin_condition,
+            "skin_feel": skin_feel,
+            "ingredient_preferences": ingredient_preference
+        }
+        db_matches = list(collection.find(db_query, {"_id": 0, "product_name": 1}))
+        db_product_names = [match['product_name'] for match in db_matches]
 
+        # Combine exact matches from both sources
+        exact_matches.extend(db_product_names)
+
+        # If exact matches are found, return them
+        if exact_matches:
+            return jsonify({
+                "recommended_products": exact_matches,
+                "source": "Exact Match"
+            })
+
+        # Step 3: No exact matches found, fall back to model prediction
         # Encode input data using LabelEncoders
         if skin_condition not in le_conditions.classes_:
             raise KeyError(f"Skin condition '{skin_condition}' not recognized.")
@@ -86,13 +104,15 @@ def recommend():
         else:
             confidence = None
 
-        # Return the product name, confidence score, and accuracy
-        response = {
-            "product_name": predicted_product_name,
-            "confidence": round(confidence, 2) if confidence else None,
+        # Fallback recommendations based on model
+        fallback_recommendations = [{"product_name": predicted_product_name, "confidence": round(confidence, 2) if confidence else None}]
+
+        # Return fallback recommendations
+        return jsonify({
+            "recommended_products": fallback_recommendations,
+            "source": "Model Prediction",
             "accuracy": model_accuracy * 100
-        }
-        return jsonify(response)
+        })
 
     except KeyError as e:
         app.logger.error(f"Invalid input: {str(e)}")

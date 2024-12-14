@@ -5,6 +5,7 @@ const {
   findUserCustomField,
   userNameAvailabilityCheck,
   sendEmail,
+  sendEmailApprovals,
   phoneNumberAvailabilityCheck,
   findUserByUserName
 } = require("../../helpers/utils");
@@ -429,9 +430,13 @@ exports.approvedOrDisapprovedPendingDermatologist = async (req, res, next) => {
     // Handle approved status
     if (status === "approved") {
       user.status = "0"; // Set status to "0" for successful approval
-      user.is_dermatologist = true; // Mark as dermatologist if applicable
-      user.is_vendor = true; // Mark as dermatologist if applicable
+      user.is_dermatologist = true; // Mark as dermatologist
+      user.is_vendor = true; // Mark as vendor
       await user.save(); // Save the changes
+
+      // Send approval email
+      await sendEmailApprovals(user.email, "approved");
+
       return await sendResponse(
         res,
         200,
@@ -446,6 +451,10 @@ exports.approvedOrDisapprovedPendingDermatologist = async (req, res, next) => {
     if (status === "rejected") {
       user.status = "2"; // Optional: Set a separate status for rejection if needed
       await user.save(); // Save the changes
+
+      // Send rejection email
+      await sendEmailApprovals(user.email, "rejected");
+
       return await sendResponse(
         res,
         200,
@@ -478,4 +487,5 @@ exports.approvedOrDisapprovedPendingDermatologist = async (req, res, next) => {
     );
   }
 };
+
 

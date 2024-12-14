@@ -1,10 +1,11 @@
 let Product = require("../../models/products/Products");
 const { sendResponse } = require("../../helpers/response");
-
+const axios = require("axios");
 const path = require("path");
+const { ChimeSDKMeetings } = require("aws-sdk");
 exports.createProduct = async (req, res, next) => {
   try {
-    let { product_name, product_description, price } = req.body;
+    let { product_name, product_description, price,skin_conditions,skin_feel,ingredient_preferences } = req.body;
 
     // Check if the file is uploaded
     if (!req.file || req.file === undefined || req.file === null) {
@@ -30,6 +31,9 @@ exports.createProduct = async (req, res, next) => {
       product_name: product_name,
       product_description: product_description,
       product_image: product_image,
+      skin_conditions: skin_conditions,
+      skin_feel: skin_feel,
+      ingredient_preferences:ingredient_preferences,
       price: price
     });
 
