@@ -115,8 +115,10 @@ print("\nModel training completed and saved as 'xgb_skincare_model.pkl' and rela
 # Step 7: Fetch data from MongoDB for recommendations
 print("\nFetching product data from MongoDB...")
 products_cursor = collection.find(
-    {
-        "skin_conditions": {"$exists": True, "$ne": None}  # Ensure skin_conditions exists and is not null
+     {
+        "skin_conditions": {"$nin": [None, "None"]},  # Exclude None and "None"
+        "skin_feel": {"$nin": [None, "None"]},
+        "ingredient_preferences": {"$nin": [None, "None"]}
     },
     {
         "product_name": 1,
