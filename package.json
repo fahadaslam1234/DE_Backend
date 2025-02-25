@@ -16,12 +16,13 @@
     "archiver": "^5.3.1",
     "aws-sdk": "^2.1246.0",
     "axios": "^1.7.2",
+    "backend": "file:",
     "bcrypt": "^5.0.1",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "currency-converter-lt": "^2.0.0-beta.0",
     "dotenv": "^16.0.2",
-    "express": "^4.19.2",
+    "express": "^4.21.2",
     "facebook-nodejs-business-sdk": "^14.0.0",
     "firebase-admin": "^11.5.0",
     "fresh": "^0.5.2",
@@ -47,13 +48,5 @@
   },
   "devDependencies": {
     "nodemon": "^2.0.19"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Muneeb-Ahmad45/ServiceMarketBackend.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Muneeb-Ahmad45/ServiceMarketBackend/issues"
-  },
-  "homepage": "https://github.com/Muneeb-Ahmad45/ServiceMarketBackend#readme"
+  }
 }

@@ -1,11 +1,16 @@
+const { route } = require('./recommendation');
+
 module.exports = async function (app) {
     try {
         // Import route modules
         const routes = {
             authRouter: require('./auth'),
             productRouter: require('./product'),
-            recommendationRouter: require('./recommendation'), // Corrected naming for consistency
-            contactUsRouter: require('./contactUs') // Corrected naming for consistency
+            recommendationRouter: require('./recommendation'),
+            contactUsRouter: require('./contactUs'), 
+            dermConnectRouter: require('./dermConnect'),
+            diseasePredictorRouter: require('./diseasePredictor'),
+            ordersRouter: require("./orders")
         };
 
         // Define the base version for the API
@@ -16,6 +21,10 @@ module.exports = async function (app) {
         app.use(`${base_version}product`, routes.productRouter);
         app.use(`${base_version}recommendation`, routes.recommendationRouter);
         app.use(`${base_version}contactUs`, routes.contactUsRouter);
+        app.use(`${base_version}dermConnect`, routes.dermConnectRouter);
+        app.use(`${base_version}diseasePredictor`, routes.diseasePredictorRouter);
+        app.use(`${base_version}orders`, routes.ordersRouter);
+
 
         console.log("Routes initialized successfully");
     } catch (err) {

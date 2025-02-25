@@ -134,3 +134,6 @@ venv/
 
 
 ~$*.xlsx
+
+data
+uploads

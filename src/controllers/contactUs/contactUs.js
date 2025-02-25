@@ -14,7 +14,7 @@ exports.sendContactForm = async (req, res) => {
       service: 'gmail',
       auth: {
         user: 'dermease4@gmail.com', // Replace with your Gmail address
-        pass: 'kliu vadh jvti ynmx', // Replace with your Gmail app password
+        pass: 'ufbo ejln nycl nxmw', // Replace with your Gmail app password
       },
       secure: true, // Ensures a secure connection
     });
