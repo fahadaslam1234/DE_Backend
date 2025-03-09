@@ -1,13 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
-import joblib
 import logging
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
-from pymongo import MongoClient
+import joblib
 import os
 
 app = Flask(__name__)
@@ -16,49 +15,23 @@ CORS(app)
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
-# ------------------- [ MongoDB Setup ] -------------------
-MONGO_URI = "mongodb://127.0.0.1:27017/skin_care"
-try:
-    client = MongoClient(MONGO_URI)
-    db = client['skin_care']
-    collection = db['products']
-    logging.info("✅ Connected to MongoDB successfully.")
-except Exception as e:
-    logging.error(f"❌ Failed to connect to MongoDB: {e}")
-
-# ------------------- [ Load Product Recommendation Model ] -------------------
-try:
-    recommendation_model = joblib.load('xgb_skincare_model.pkl')
-    le_conditions = joblib.load('le_conditions.pkl')
-    le_feel = joblib.load('le_feel.pkl')
-    le_ingredient = joblib.load('le_ingredient.pkl')
-    le_product = joblib.load('le_product.pkl')
-    model_accuracy = joblib.load('model_accuracy.pkl')
-    logging.info("✅ Product recommendation model loaded successfully.")
-except Exception as e:
-    logging.error(f"❌ Failed to load recommendation model: {e}")
-
-# Load dataset for direct lookup
-product_file_path = 'data/solution_finder_dataset.xlsx'
-try:
-    recommendation_df = pd.read_excel(product_file_path, engine='openpyxl')
-    logging.info("✅ Product dataset loaded successfully.")
-except Exception as e:
-    logging.error(f"❌ Failed to load product dataset: {e}")
-
-# ------------------- [ Load Skin Disease Prediction Model ] -------------------
-MODEL_PATH = "skin_disease_resnet50.h5"
+# ------------------- [ Load Skin Disease Prediction Model (VGG16) ] -------------------
+MODEL_PATH = "./vgg16_skin_model_final.h5"  # Update with VGG16 model filename
 if os.path.exists(MODEL_PATH):
     model = load_model(MODEL_PATH)
-    logging.info("✅ Skin disease prediction model loaded successfully.")
+    logging.info("✅ VGG16 Skin disease prediction model loaded successfully.")
 else:
     logging.error(f"❌ Model file not found: {MODEL_PATH}")
     raise FileNotFoundError(f"Model file {MODEL_PATH} is missing!")
 
-# Ensure class names match dataset folder names
+# Ensure class names match your dataset folder names
 class_names = [
-    "Eczema", "Melanoma", "Atopic Dermatitis", "Basal Cell Carcinoma (BCC)",
-    "Melanocytic Nevi (NV)", "Benign Keratosis-like Lesions (BKL)",
+    "Eczema",
+    "Melanoma",
+    "Atopic Dermatitis",
+    "Basal Cell Carcinoma (BCC)",
+    "Melanocytic Nevi (NV)",
+    "Benign Keratosis-like Lesions (BKL)",
     "Psoriasis pictures Lichen Planus and related diseases",
     "Seborrheic Keratoses and other Benign Tumors",
     "Tinea Ringworm Candidiasis and other Fungal Infections",
@@ -74,16 +47,17 @@ def log_request_info():
     if request.method == 'POST':
         logging.info(f"[INFO] Request Headers: {request.headers}")
 
-# ------------------- [ Skin Disease Prediction API ] -------------------
+# ------------------- [ Updated Skin Disease Prediction API for VGG16 ] -------------------
 @app.route('/predict_skin_disease', methods=['POST'])
 def predict_skin_disease():
-    """Predict skin disease from an uploaded image using ResNet50V2."""
-
+    """
+    Predict skin disease from an uploaded image using VGG16.
+    ONLY returns the disease name without confidence score.
+    """
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided. Please upload an image.'}), 400
 
     file = request.files['file']
-
     if file.filename == '':
         return jsonify({'error': 'No selected file. Please upload a valid image.'}), 400
 
@@ -93,96 +67,117 @@ def predict_skin_disease():
         os.makedirs("uploads", exist_ok=True)  # Ensure the directory exists
         file.save(file_path)
 
-        # Load and preprocess the image
+        # Load and preprocess the image using VGG16 preprocessing
         img = image.load_img(file_path, target_size=IMG_SIZE)
         img_array = image.img_to_array(img)
         img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-        img_array = img_array / 255.0  # Normalize
+        img_array = tf.keras.applications.vgg16.preprocess_input(img_array)  # VGG16 preprocessing
 
         # Predict using the model
         predictions = model.predict(img_array)
-        confidence_scores = predictions[0]
-        predicted_index = np.argmax(confidence_scores)
+        predicted_index = np.argmax(predictions[0])
         predicted_label = class_names[predicted_index]
-        confidence = float(confidence_scores[predicted_index] * 100)
 
-        # Handle Normal Skin Case
-        if confidence < 50:  
-            predicted_label = "Healthy Skin"
-            confidence = 99.9  # High confidence since it's not classified as a disease
+        logging.info(f"✅ Predicted Disease: {predicted_label}")
 
-        logging.info(f"✅ Prediction: {predicted_label} (Confidence: {confidence:.2f}%)")
-
-        os.remove(file_path)  # Remove temp file
+        # Remove the temporary file
+        os.remove(file_path)
 
         return jsonify({
-            "predicted_disease": predicted_label,
-            "confidence": round(confidence, 2)
+            "predicted_disease": predicted_label  # Only returns the disease name
         })
 
     except Exception as e:
         logging.error(f"❌ Error processing image: {str(e)}")
         return jsonify({'error': 'Image processing failed.', 'details': str(e)}), 500
 
-# ------------------- [ Skincare Product Recommendation API ] -------------------
-@app.route('/recommendation', methods=['POST'])
-def recommend():
-    """Recommend skincare products based on user input."""
-    data = request.get_json()
+# ------------------- [ Load ML Models & LabelEncoders for Product Recommendation ] -------------------
+MODEL_PRODUCT_PATH = "./xgb_product_model.pkl"
+MODEL_URL_PATH = "./xgb_url_model.pkl"
 
-    if not data or not all(key in data for key in ['skin_conditions', 'skin_feel', 'ingredient_preferences']):
-        return jsonify({'error': 'Missing required input fields: skin_conditions, skin_feel, ingredient_preferences'}), 400
+LABEL_SKIN_TYPE = "./le_skin_type.pkl"
+LABEL_SKIN_TONE = "./le_skin_tone.pkl"
+LABEL_BRAND = "./le_brand.pkl"
+LABEL_CATEGORY = "./le_category.pkl"
+LABEL_PRODUCT = "./le_product.pkl"
+LABEL_PRODUCT_URL = "./le_product_url.pkl"
+
+# Load models
+model_product = joblib.load(MODEL_PRODUCT_PATH)
+model_url = joblib.load(MODEL_URL_PATH)
+
+# Load LabelEncoders
+le_skin_type = joblib.load(LABEL_SKIN_TYPE)
+le_skin_tone = joblib.load(LABEL_SKIN_TONE)
+le_brand = joblib.load(LABEL_BRAND)
+le_category = joblib.load(LABEL_CATEGORY)
+le_product = joblib.load(LABEL_PRODUCT)
+le_product_url = joblib.load(LABEL_PRODUCT_URL)
+
+logging.info("✅ ML Models & LabelEncoders Loaded Successfully!")
+
+# ------------------- [ Define Recommendation Function (Fixes Case Sensitivity) ] -------------------
+def recommend_product_details(skin_tone, skin_type, brand, category):
+    try:
+        # Convert user input to lowercase (fixes case sensitivity issues)
+        skin_tone = skin_tone.lower().strip()
+        skin_type = skin_type.lower().strip()
+        brand = brand.lower().strip()
+        category = category.lower().strip()
+
+        # Convert to numeric using LabelEncoders
+        skin_tone_encoded = le_skin_tone.transform([skin_tone])[0]
+        skin_type_encoded = le_skin_type.transform([skin_type])[0]
+        brand_encoded = le_brand.transform([brand])[0]
+        category_encoded = le_category.transform([category])[0]
+
+        # Prepare Input Data (Ensuring Feature Order Matches Training)
+        input_data = pd.DataFrame([[skin_type_encoded, skin_tone_encoded, brand_encoded, category_encoded]],
+                                  columns=['skin_type', 'skin_tone', 'brand', 'category'])
+
+        # Predict Product & URL
+        predicted_product_id = model_product.predict(input_data)[0]
+        predicted_url_id = model_url.predict(input_data)[0]
+
+        # Decode Predictions
+        predicted_product = le_product.inverse_transform([predicted_product_id])[0]
+        predicted_url = le_product_url.inverse_transform([predicted_url_id])[0]
+
+        return {"Product": predicted_product, "Product_URL": predicted_url}
+
+    except Exception as e:
+        logging.error(f"❌ Error in recommendation: {str(e)}")
+        return {"error": str(e)}
+
+# ------------------- [ API Route: Product Recommendation ] -------------------
+@app.route('/recommend_product', methods=['POST'])
+def recommend():
+    """
+    API to recommend skincare products based on:
+    - skin_tone
+    - skin_type
+    - brand
+    - category
+
+    Returns:
+    - Recommended Product
+    - Product URL
+    """
+    data = request.get_json()
+    print(data)
+    if not data or not all(key in data for key in ['skin_tone', 'skin_type', 'brand', 'category']):
+        return jsonify({'error': 'Missing required input fields: skin_tone, skin_type, brand, category'}), 400
 
     try:
-        # Extract and sanitize inputs
-        skin_condition = data.get('skin_conditions').strip()
-        skin_feel = data.get('skin_feel').strip()
-        ingredient_preference = data.get('ingredient_preferences').strip()
+        skin_tone = data.get('skin_tone')
+        skin_type = data.get('skin_type')
+        brand = data.get('brand')
+        category = data.get('category')
 
-        # Step 1: Check for exact matches in dataset
-        exact_match_df = recommendation_df[
-            (recommendation_df['skin_conditions'] == skin_condition) &
-            (recommendation_df['skin_feel'] == skin_feel) &
-            (recommendation_df['ingredient_preferences'] == ingredient_preference)
-        ]
-        exact_matches = exact_match_df['product_name'].tolist()
+        # Get Recommendation
+        recommendation = recommend_product_details(skin_tone, skin_type, brand, category)
 
-        # Step 2: Check for exact matches in the database
-        db_query = {"skin_conditions": skin_condition, "skin_feel": skin_feel, "ingredient_preferences": ingredient_preference}
-        db_matches = list(collection.find(db_query, {"_id": 0, "product_name": 1}))
-        db_product_names = [match['product_name'] for match in db_matches]
-
-        exact_matches.extend(db_product_names)
-
-        if exact_matches:
-            return jsonify({"recommended_products": exact_matches, "source": "Exact Match"})
-
-        # Step 3: Model Prediction
-        if skin_condition not in le_conditions.classes_ or skin_feel not in le_feel.classes_ or ingredient_preference not in le_ingredient.classes_:
-            raise KeyError("Invalid input detected.")
-
-        condition_encoded = le_conditions.transform([skin_condition])[0]
-        feel_encoded = le_feel.transform([skin_feel])[0]
-        ingredient_encoded = le_ingredient.transform([ingredient_preference])[0]
-
-        input_data = [[condition_encoded, feel_encoded, ingredient_encoded]]
-
-        prediction = recommendation_model.predict(input_data)
-        predicted_label = le_product.inverse_transform([prediction[0]])[0]
-
-        confidence = None
-        if hasattr(recommendation_model, "predict_proba"):
-            confidence = max(recommendation_model.predict_proba(input_data)[0]) * 100
-
-        return jsonify({
-            "recommended_products": [{"product_name": predicted_label, "confidence": round(confidence, 2) if confidence else None}],
-            "source": "Model Prediction",
-            "accuracy": model_accuracy * 100
-        })
-
-    except KeyError as e:
-        logging.error(f"❌ Invalid input: {str(e)}")
-        return jsonify({'error': f"Invalid input: {str(e)}"}), 400
+        return jsonify(recommendation)
 
     except Exception as e:
         logging.error(f"❌ An error occurred: {str(e)}")

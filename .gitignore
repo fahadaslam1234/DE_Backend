@@ -137,3 +137,6 @@ venv/
 
 data
 uploads
+
+*.pkl
+*.h5

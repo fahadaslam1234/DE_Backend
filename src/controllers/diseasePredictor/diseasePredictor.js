@@ -15,7 +15,7 @@ exports.uploadImage = async (req, res) => {
             return res.status(400).json({ error: "No file uploaded." });
         }
 
-        // ✅ Ensure `userId` is received
+        // ✅ Ensure userId is received
         const userId = req.body.userId || "anonymous";
         console.log("[INFO] Received User ID:", userId);
 
@@ -54,7 +54,6 @@ exports.uploadImage = async (req, res) => {
             userId, // Save userId
             image: filePath,
             predictedDisease,
-            confidence,
             uploadedAt: new Date()
         });
 
